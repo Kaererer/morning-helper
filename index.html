@@ -237,6 +237,7 @@
       <div class="step-name" id="stepName">刷牙</div>
       <div class="timer" id="timerText">04:00</div>
       <div class="small" id="stepHint">建議時間：4 分鐘。時間到會提醒你，10 秒內唔撳就自動下一步。</div>
+      <div class="small" id="nowPlaying">目前未播放音樂</div>
 
       <div class="controls">
         <button class="primary" id="startPauseBtn">開始 / 暫停</button>
@@ -247,8 +248,8 @@
       </div>
 
       <div class="muted-box">
-        小提示：如果你想每一步播唔同歌，就將歌檔放入同一層嘅 <b>audio</b> 資料夾，再喺下面 <b>steps</b> 陣列改 <b>audio</b> 路徑。<br>
-        例如：<code>audio: "audio/brush.mp3"</code>
+        小提示：而家呢版用<b>分類歌單</b>。將歌檔放入同一層嘅 <b>audio</b> 資料夾，再喺下面 <b>steps</b> 陣列改 <b>category</b>，以及喺 <b>musicLibrary</b> 入面填歌路徑。<br>
+        例如：<code>category: "anime"</code>
       </div>
     </div>
 
@@ -274,20 +275,20 @@
        1. 流程資料區
        - name: 步驟名稱
        - duration: 建議秒數
-       - audio: 音樂檔路徑（可留空字串）
+       - category: 音樂分類（例如 anime / game）
        ========================= */
-    const steps = [
-      { name: "刷牙, 6分钟", duration: 6 * 60, speakText: "Brush teeth" },
-      { name: "洗面, 5分钟", duration: 5 * 60, speakText: "Wash face" },
-      { name: "拖地, 4分钟", duration: 4 * 60, speakText: "Mop the floor"},
-      { name: "煮鸡蛋 + 饮水, 3分钟", duration: 3 * 60, speakText: "Boil eggs and drink water" },
-      { name: "匙羹放冰箱 + 拉伸胸背，4分钟", duration: 4 * 60, speakText: "Put spoon in fridge and stretch chest and back" },
-      { name: "颈部运动 + 眼运动 + 冰敷，8分钟", duration: 8 * 60, speakText: "Neck exercise, eye exercise, and cold compress" },
-      { name: "褶被 + 攞早餐，3分钟", duration: 3 * 60, speakText: "Fold blanket and get breakfast"},
-      { name: "食早餐 + 执台，20分钟", duration: 20 * 60, speakText: "Eat breakfast and clean the table"},
-      { name: "屙屎, 10分钟", duration: 10 * 60, speakText: "Use the bathroom"},
-      { name: "涂防晒 + 换衫, 5分钟", duration: 5 * 60, category: "game", speakText: "Put on sunscreen and change clothes"},
-      { name: "准备出门嘅嘢, 10分钟", duration: 10 * 60, category: "anime", speakText: "Get ready to go out" }
+       const steps = [
+      { name: "刷牙", duration: 6 * 60, speakText: "Brush teeth" },
+      { name: "洗面", duration: 5 * 60, speakText: "Wash face" },
+      { name: "拖地", duration: 4 * 60, speakText: "Mop the floor"},
+      { name: "煮鸡蛋 + 饮水", duration: 3 * 60, speakText: "Boil eggs and drink water" },
+      { name: "匙羹放冰箱 + 拉伸胸背", duration: 4 * 60, speakText: "Put spoon in fridge and stretch chest and back" },
+      { name: "颈部运动 + 眼运动 + 冰敷", duration: 8 * 60, speakText: "Neck exercise, eye exercise, and cold compress" },
+      { name: "褶被 + 攞早餐", duration: 3 * 60, speakText: "Fold blanket and get breakfast"},
+      { name: "食早餐 + 执台", duration: 20 * 60, speakText: "Eat breakfast and clean the table"},
+      { name: "屙屎", duration: 10 * 60, speakText: "Use the bathroom"},
+      { name: "涂防晒 + 梳头 + 影相", duration: 8 * 60, category: "game", speakText: "Put on sunscreen, comb hair and take photos"},
+      { name: "洗厕所 + 换衫 + 准备出门嘅嘢", duration: 15 * 60, category: "anime", speakText: "Clean the bathroom, change clothes and Get ready to go out" }
     ];
 
     /* =========================
@@ -325,6 +326,7 @@
     const stepList = document.getElementById('stepList');
     const finishBox = document.getElementById('finishBox');
     const finishText = document.getElementById('finishText');
+    const nowPlaying = document.getElementById('nowPlaying');
 
     const startPauseBtn = document.getElementById('startPauseBtn');
     const doneBtn = document.getElementById('doneBtn');
@@ -340,7 +342,15 @@
         "audio/anime/3.mp3",
         "audio/anime/4.mp3",
         "audio/anime/5.mp3",
-        "audio/anime/6.mp3"
+        "audio/anime/6.mp3",
+        "audio/anime/7.mp3",
+        "audio/anime/8.mp3",
+        "audio/anime/9.mp3",
+        "audio/anime/10.mp3",
+        "audio/anime/11.mp3",
+        "audio/anime/12.mp3",
+        "audio/anime/13.mp3",
+        "audio/anime/14.mp3"
       ],
       game: [
         "audio/game/1.mp3",
@@ -358,11 +368,11 @@
     // 目前播緊邊個分類
     let currentCategory = null;
 
-    // 目前分類洗牌後嘅播放清單
-    let currentPlaylist = [];
+    // 目前播緊邊首歌
+    let currentTrackSrc = null;
 
-    // 目前播到清單第幾首
-    let currentTrackIndex = 0;
+    // 上一首播過邊首（避免連續重複）
+    let lastTrackSrc = null;
 
     /* =========================
        4. 小工具函式
@@ -438,59 +448,60 @@
   window.speechSynthesis.speak(utter);
 }
 
-    function shuffleArray(list) {
-  // 將陣列亂序
-  const arr = [...list];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
+    function pickRandomTrack(category) {
+      // 真隨機抽歌：每次都重新抽，但避免同上一首一樣
+      const list = musicLibrary[category] || [];
+      if (!list.length) return null;
 
-    function loadCategoryPlaylist(category) {
-      // 讀入某個分類，並且亂序
-      const sourceList = musicLibrary[category] || [];
-      currentPlaylist = shuffleArray(sourceList);
-      currentTrackIndex = 0;
-      currentCategory = category;
+      // 如果得 1 首，就直接播
+      if (list.length === 1) return list[0];
+
+      let candidate = null;
+      let guard = 0;
+
+      do {
+        const randomIndex = Math.floor(Math.random() * list.length);
+        candidate = list[randomIndex];
+        guard++;
+      } while (candidate === lastTrackSrc && guard < 20);
+
+      return candidate;
+    }
+
+    function getTrackDisplayName(src) {
+      if (!src) return '目前未播放音樂';
+      const fileName = src.split('/').pop() || src;
+      return `目前播放：${fileName}`;
     }
 
     function playCurrentTrack() {
-      // 播目前分類清單中當前呢首
-      if (!currentPlaylist.length) return;
+      // 播目前抽中嗰首歌
+      if (!currentTrackSrc) return;
 
+      nowPlaying.textContent = getTrackDisplayName(currentTrackSrc);
       bgm.pause();
       bgm.currentTime = 0;
-      bgm.src = currentPlaylist[currentTrackIndex];
+      bgm.src = currentTrackSrc;
       bgm.play().catch(err => {
         console.log('bgm play failed', err);
       });
     }
 
-    function playNextTrackInCategory() {
-      // 一首播完，自動播下一首；如果播晒就重新洗牌
-      if (!currentPlaylist.length) return;
-
-      currentTrackIndex++;
-
-      if (currentTrackIndex >= currentPlaylist.length) {
-        currentPlaylist = shuffleArray(currentPlaylist);
-        currentTrackIndex = 0;
-      }
-
-      playCurrentTrack();
-    }
-
     function playStepAudio(step) {
-      // 進入某個步驟時，根據 category 決定播邊個系列
-      if (!step.category) return;
-
-      // 如果轉咗去新分類，就重新載入嗰個分類歌單
-      if (step.category !== currentCategory) {
-        loadCategoryPlaylist(step.category);
+      // 進入某個步驟時，根據 category 真隨機抽一首歌
+      if (!step.category) {
+        currentCategory = null;
+        currentTrackSrc = null;
+        nowPlaying.textContent = '目前未播放音樂';
+        return;
       }
 
+      currentCategory = step.category;
+      currentTrackSrc = pickRandomTrack(currentCategory);
+
+      if (!currentTrackSrc) return;
+
+      lastTrackSrc = currentTrackSrc;
       playCurrentTrack();
     }
 
@@ -509,11 +520,18 @@
     function stopAudio() {
       bgm.pause();
       bgm.currentTime = 0;
+      nowPlaying.textContent = '目前未播放音樂';
     }
 
     bgm.addEventListener('ended', () => {
-      // 一首歌播完，自動播同分類下一首
-      playNextTrackInCategory();
+      // 一首歌播完，再真隨機抽同分類另一首（避免連續重複）
+      if (!currentCategory) return;
+
+      currentTrackSrc = pickRandomTrack(currentCategory);
+      if (!currentTrackSrc) return;
+
+      lastTrackSrc = currentTrackSrc;
+      playCurrentTrack();
     });
 
     function clearConfirmCountdown() {
