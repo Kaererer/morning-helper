@@ -1,0 +1,6 @@
+小提示
+而家呢版用分類歌單。將歌檔放入同一層嘅 audio 資料夾，再喺下面 steps 陣列改 music.category，
+以及喺 musicLibrary 入面填路徑。
+
+例如：
+music: { enabled: true, category: "anime" }
